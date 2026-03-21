@@ -212,7 +212,8 @@ while fire:
                 if enemy.alive and b_rect.colliderect(enemy.get_rect()):
                     enemy.take_damage(b.damage)
                     b.active = False
-                    if not enemy.alive:
+                    if not enemy.alive and not enemy.has_exploded:
+                        enemy.has_exploded = True
                         smoke_imgs = AssetManager.get_instance().get_smoke_images(enemy.color)
                         if smoke_imgs:
                             for _ in range(6):
@@ -224,11 +225,6 @@ while fire:
                     if obs.alive and b_rect.colliderect(obs.get_rect()):
                         if obs.destructible:
                             obs.take_damage(b.damage)
-                            if not obs.alive:
-                                smoke_imgs = AssetManager.get_instance().get_smoke_images('black')
-                                if smoke_imgs:
-                                    for _ in range(5):
-                                        particle_effects.append(SmokeParticle(obs.x + obs.width//2, obs.y + obs.height//2, smoke_imgs))
                         b.active = False
                         break
 
@@ -241,7 +237,8 @@ while fire:
                     if b_rect.colliderect(p_rect):
                         player.take_damage(b.damage)
                         b.active = False
-                        if not player.alive:
+                        if not player.alive and not player.has_exploded:
+                            player.has_exploded = True
                             smoke_imgs = AssetManager.get_instance().get_smoke_images(player.color)
                             if smoke_imgs:
                                 for _ in range(8):
@@ -252,11 +249,6 @@ while fire:
                         if obs.alive and b_rect.colliderect(obs.get_rect()):
                             if obs.destructible:
                                 obs.take_damage(b.damage)
-                                if not obs.alive:
-                                    smoke_imgs = AssetManager.get_instance().get_smoke_images('black')
-                                    if smoke_imgs:
-                                        for _ in range(5):
-                                            particle_effects.append(SmokeParticle(obs.x + obs.width//2, obs.y + obs.height//2, smoke_imgs))
                             b.active = False
                             break
 

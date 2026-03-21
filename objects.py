@@ -109,6 +109,7 @@ class Entity:
         self.max_health = max_health
         self.health = max_health
         self.alive = True
+        self.has_exploded = False
         self.direction = 'up'
         self.image = None
         self.barrel_image = None
