@@ -9,6 +9,13 @@ win_size = [600, 600]
 win = pyg.display.set_mode(win_size)
 pyg.display.set_caption("Tank Fire")
 
+game_over_played = False
+try:
+    end_sound = pyg.mixer.Sound('endSound.wav')
+    end_sound.set_volume(0.5)
+except Exception:
+    end_sound = None
+
 player = Tank(300, 300, 20, 20, 'purple')
 
 enemy_list = []
@@ -77,6 +84,10 @@ while fire:
     if player.alive:
         player.draw(win)
     else:
+        if not game_over_played:
+            if end_sound:
+                end_sound.play()
+            game_over_played = True
         # Game Over text
         game_over_img = font.render('GAME OVER', True, (255, 0, 0))
         win.blit(game_over_img, (win_size[0]//2 - game_over_img.get_width()//2, win_size[1]//2))

@@ -2,6 +2,19 @@ import pygame as pyg
 import random
 from pygame.locals import *
 
+pyg.init()
+try:
+    shoot_sound = pyg.mixer.Sound('laser.wav')
+    shoot_sound.set_volume(0.2)
+except Exception:
+    shoot_sound = None
+
+try:
+    explosion_sound = pyg.mixer.Sound('explosion.wav')
+    explosion_sound.set_volume(0.3)
+except Exception:
+    explosion_sound = None
+
 win_size = [600, 600]
 
 class Entity:
@@ -26,6 +39,8 @@ class Entity:
         if self.health <= 0:
             self.health = 0
             self.alive = False
+            if explosion_sound:
+                explosion_sound.play()
             
     def draw_health_bar(self, win):
         if not self.alive or self.health <= 0:
@@ -142,6 +157,8 @@ class Tank(Entity):
                             self.RIGHT, self.LEFT, self.UP, self.DOWN, owner='player', damage=25)
             self.bullets.append(bullet)
             self.shoot_time = 0
+            if shoot_sound:
+                shoot_sound.play()
 
         # Update bullets
         for b in self.bullets:
@@ -230,6 +247,8 @@ class Enemy(Entity):
                             owner='enemy', damage=10)
             self.bullets.append(bullet)
             self.shoot_time = 0
+            if shoot_sound:
+                shoot_sound.play()
 
         # Update bullets
         for b in self.bullets:
