@@ -6,6 +6,7 @@ class AssetManager:
 
     def __init__(self):
         self.tanks = {}
+        self.barrels = {}
         self.bullets = {}
         self.env = {}
         self.initialized = False
@@ -21,22 +22,27 @@ class AssetManager:
         base_dir = os.path.dirname(__file__)
         assets_dir = os.path.join(base_dir, 'assets')
         
-        # 1. Load Tanks
         tank_colors = ['beige', 'black', 'blue', 'green', 'red']
+        
+        # 1. Load Tanks and Barrels
         for c in tank_colors:
-            # Match capitalization from file listing, e.g. tankBlue.png
-            filename = f"tank{c.capitalize()}.png"
-            path = os.path.join(assets_dir, 'Tanks', filename)
-            if os.path.exists(path):
-                img = pyg.image.load(path).convert_alpha()
-                # Scale tanks to slightly larger than the old 20x20 rect
+            filename_tank = f"tank{c.capitalize()}.png"
+            path_tank = os.path.join(assets_dir, 'Tanks', filename_tank)
+            if os.path.exists(path_tank):
+                img = pyg.image.load(path_tank).convert_alpha()
                 img = pyg.transform.scale(img, (35, 35))
                 self.tanks[c] = img
+                
+            filename_barrel = f"barrel{c.capitalize()}.png"
+            path_barrel = os.path.join(assets_dir, 'Tanks', filename_barrel)
+            if os.path.exists(path_barrel):
+                img_b = pyg.image.load(path_barrel).convert_alpha()
+                img_b = pyg.transform.scale(img_b, (10, 24))
+                self.barrels[c] = img_b
                 
         # 2. Load Bullets
         bullet_colors = ['beige', 'blue', 'green', 'red', 'silver', 'yellow']
         for c in bullet_colors:
-            # Bullet file looks like bulletRed.png
             filename = f"bullet{c.capitalize()}.png"
             path = os.path.join(assets_dir, 'Bullets', filename)
             if os.path.exists(path):
@@ -52,7 +58,6 @@ class AssetManager:
                 img = pyg.image.load(path).convert_alpha()
                 key = ef.split('.')[0]
                 
-                # Optionally scale environment objects
                 if 'treeLarge' in key:
                     img = pyg.transform.scale(img, (60, 60))
                 elif 'treeSmall' in key:
@@ -68,14 +73,24 @@ class AssetManager:
         c = color.lower()
         if c not in self.tanks:
             c = list(self.tanks.keys())[0] if self.tanks else None
-            
-        if not c:
-            return None
+        if not c: return None
             
         base = self.tanks[c]
+        angle = 0
+        if direction == 'up': angle = 0
+        elif direction == 'left': angle = 90
+        elif direction == 'down': angle = 180
+        elif direction == 'right': angle = 270
         
-        # Rotate image based on direction
-        # Assuming original asset faces UP
+        return pyg.transform.rotate(base, angle)
+
+    def get_barrel_image(self, color, direction):
+        c = color.lower()
+        if c not in self.barrels:
+            c = list(self.barrels.keys())[0] if self.barrels else None
+        if not c: return None
+            
+        base = self.barrels[c]
         angle = 0
         if direction == 'up': angle = 0
         elif direction == 'left': angle = 90
@@ -88,12 +103,9 @@ class AssetManager:
         c = color.lower()
         if c not in self.bullets:
             c = list(self.bullets.keys())[0] if self.bullets else None
-            
-        if not c:
-            return None
+        if not c: return None
             
         base = self.bullets[c]
-        
         angle = 0
         if direction == 'up': angle = 0
         elif direction == 'left': angle = 90

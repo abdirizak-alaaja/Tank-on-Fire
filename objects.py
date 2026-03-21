@@ -31,6 +31,7 @@ class Entity:
         self.alive = True
         self.direction = 'up'
         self.image = None
+        self.barrel_image = None
         
     def get_rect(self):
         return pyg.Rect(self.x, self.y, self.width, self.height)
@@ -59,28 +60,29 @@ class Entity:
 
     def draw(self, win):
         if self.alive:
+            rect = self.get_rect()
             if self.image:
-                rect = self.get_rect()
                 img_rect = self.image.get_rect(center=rect.center)
                 win.blit(self.image, img_rect)
             else:
-                pyg.draw.rect(win, self.color, self.get_rect())
+                pyg.draw.rect(win, self.color, rect)
+                
+            if self.barrel_image:
+                offset_x, offset_y = 0, 0
+                if self.direction == 'up': offset_y = -10
+                elif self.direction == 'down': offset_y = 10
+                elif self.direction == 'left': offset_x = -10
+                elif self.direction == 'right': offset_x = 10
+                
+                b_rect = self.barrel_image.get_rect(center=(rect.centerx + offset_x, rect.centery + offset_y))
+                win.blit(self.barrel_image, b_rect)
+                
             self.draw_health_bar(win)
 
 class Bullet:
     def __init__(self, x, y, width, height, color, RIGHT, LEFT, UP, DOWN, owner, damage=10):
         self.width = width
         self.height = height
-        
-        if DOWN:
-            y += 20 + 5
-        elif RIGHT or LEFT:
-            y += 15
-            if RIGHT:
-                x += 10
-            else:
-                x -= 5
-                
         self.x = x
         self.y = y
         self.color = color
@@ -128,6 +130,7 @@ class Bullet:
             else:
                 pyg.draw.rect(win, self.color, self.get_rect())
 
+
 class Tank(Entity):
     def __init__(self, x, y, width, height, color):
         orig_width = 32
@@ -165,8 +168,23 @@ class Tank(Entity):
         self.shoot_time += 1
         if key_pressed[K_SPACE] and self.shoot_time >= 25:
             b_width, b_height = 10, 18
-            bullet = Bullet(self.x + self.width//2 - 5, self.y + self.height//2 - 9, 
-                            b_width, b_height, 'red', 
+            rect = self.get_rect()
+            tip_x, tip_y = rect.centerx, rect.centery
+            if self.direction == 'up':
+                tip_y -= 22
+                tip_x -= b_width//2
+            elif self.direction == 'down':
+                tip_y += 22
+                tip_x -= b_width//2
+            elif self.direction == 'left':
+                tip_x -= 22
+                tip_y -= b_width//2
+            elif self.direction == 'right':
+                tip_x += 22
+                tip_y -= b_width//2
+
+            bullet = Bullet(tip_x, tip_y, 
+                            b_width, b_height, self.color, 
                             self.RIGHT, self.LEFT, self.UP, self.DOWN, owner='player', damage=25)
             self.bullets.append(bullet)
             self.shoot_time = 0
@@ -180,9 +198,11 @@ class Tank(Entity):
     def draw(self, win):
         if not self.alive: return
         self.image = AssetManager.get_instance().get_tank_image(self.color, self.direction)
+        self.barrel_image = AssetManager.get_instance().get_barrel_image(self.color, self.direction)
         super().draw(win)
         for b in self.bullets:
             b.draw(win)
+
 
 class Enemy(Entity):
     def __init__(self, x, y, width, height, color):
@@ -235,8 +255,23 @@ class Enemy(Entity):
         self.shoot_time += 1
         if self.shoot_time >= 25 and self.shooting:
             b_width, b_height = 10, 18
-            bullet = Bullet(self.x + self.width//2 - 5, self.y + self.height//2 - 9, 
-                            b_width, b_height, 'red',
+            rect = self.get_rect()
+            tip_x, tip_y = rect.centerx, rect.centery
+            if self.direction == 'up':
+                tip_y -= 22
+                tip_x -= b_width//2
+            elif self.direction == 'down':
+                tip_y += 22
+                tip_x -= b_width//2
+            elif self.direction == 'left':
+                tip_x -= 22
+                tip_y -= b_width//2
+            elif self.direction == 'right':
+                tip_x += 22
+                tip_y -= b_width//2
+
+            bullet = Bullet(tip_x, tip_y, 
+                            b_width, b_height, self.color,
                             self.directions['right'], self.directions['left'],
                             self.directions['up'], self.directions['down'], 
                             owner='enemy', damage=10)
@@ -252,6 +287,7 @@ class Enemy(Entity):
     def draw(self, win):
         if not self.alive: return
         self.image = AssetManager.get_instance().get_tank_image(self.color, self.direction)
+        self.barrel_image = AssetManager.get_instance().get_barrel_image(self.color, self.direction)
         super().draw(win)
         for b in self.bullets:
             b.draw(win)
