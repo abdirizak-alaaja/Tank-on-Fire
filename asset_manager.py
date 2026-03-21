@@ -10,6 +10,7 @@ class AssetManager:
         self.bullets = {}
         self.env = {}
         self.obstacles = {}
+        self.smoke = {}
         self.initialized = False
 
     @classmethod
@@ -79,6 +80,32 @@ class AssetManager:
                 key = of.split('.')[0]
                 img = pyg.transform.scale(img, (35, 35))
                 self.obstacles[key] = img
+
+        # 5. Load Smoke (Dynamically Tinted)
+        base_smoke = []
+        for i in range(6):
+            path = os.path.join(assets_dir, 'Smoke', f'smokeWhite{i}.png')
+            if os.path.exists(path):
+                img = pyg.image.load(path).convert_alpha()
+                base_smoke.append(img)
+
+        color_maps = {
+            'beige': (210, 180, 140, 255),
+            'black': (50, 50, 50, 255),
+            'blue': (65, 105, 225, 255),
+            'green': (34, 139, 34, 255),
+            'red': (220, 20, 60, 255)
+        }
+        
+        for c, rgb in color_maps.items():
+            self.smoke[c] = []
+            for img in base_smoke:
+                tint_surface = pyg.Surface(img.get_size(), pyg.SRCALPHA)
+                tint_surface.fill(rgb)
+                tinted = img.copy()
+                tinted.blit(tint_surface, (0, 0), special_flags=pyg.BLEND_RGBA_MULT)
+                tinted = pyg.transform.scale(tinted, (40, 40))
+                self.smoke[c].append(tinted)
                 
         self.initialized = True
 
@@ -132,3 +159,7 @@ class AssetManager:
 
     def get_obstacle_image(self, name):
         return self.obstacles.get(name, None)
+
+    def get_smoke_images(self, color):
+        c = color.lower()
+        return self.smoke.get(c, self.smoke.get('black'))

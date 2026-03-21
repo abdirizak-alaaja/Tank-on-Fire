@@ -3,7 +3,7 @@ import random as rand
 import sys
 from pygame.locals import *
 from asset_manager import AssetManager
-from objects import Tank, Enemy, Obstacle
+from objects import Tank, Enemy, Obstacle, SmokeParticle
 
 pyg.init()
 win_size = [600, 600]
@@ -48,6 +48,7 @@ bg_surface = None
 player = None
 enemy_list = []
 obstacle_list = []
+particle_effects = []
 game_over_played = False
 end_sound = None
 
@@ -168,11 +169,12 @@ while fire:
             for _ in range(12):
                 otype, destructible = rand.choice(obs_types)
                 ox, oy = 300, 300
-                # Ensure obstacles don't spawn directly on the player
                 while abs(ox - 300) < 60 and abs(oy - 300) < 60:
                     ox = rand.randint(50, win_size[0] - 50)
                     oy = rand.randint(50, win_size[1] - 50)
                 obstacle_list.append(Obstacle(ox, oy, 35, 35, otype, destructible=destructible, health=50))
+                
+            particle_effects.clear()
                 
             game_over_played = False
             try:
@@ -196,6 +198,10 @@ while fire:
         for enemy in enemy_list:
             enemy.update(obstacle_list)
 
+        for p in particle_effects:
+            p.update()
+            
+        particle_effects = [p for p in particle_effects if p.active]
         obstacle_list = [obs for obs in obstacle_list if obs.alive]
 
         for b in player.bullets:
@@ -206,6 +212,11 @@ while fire:
                 if enemy.alive and b_rect.colliderect(enemy.get_rect()):
                     enemy.take_damage(b.damage)
                     b.active = False
+                    if not enemy.alive:
+                        smoke_imgs = AssetManager.get_instance().get_smoke_images(enemy.color)
+                        if smoke_imgs:
+                            for _ in range(6):
+                                particle_effects.append(SmokeParticle(enemy.x + enemy.width//2, enemy.y + enemy.height//2, smoke_imgs))
                     break 
                     
             if b.active:
@@ -213,6 +224,11 @@ while fire:
                     if obs.alive and b_rect.colliderect(obs.get_rect()):
                         if obs.destructible:
                             obs.take_damage(b.damage)
+                            if not obs.alive:
+                                smoke_imgs = AssetManager.get_instance().get_smoke_images('black')
+                                if smoke_imgs:
+                                    for _ in range(5):
+                                        particle_effects.append(SmokeParticle(obs.x + obs.width//2, obs.y + obs.height//2, smoke_imgs))
                         b.active = False
                         break
 
@@ -225,12 +241,22 @@ while fire:
                     if b_rect.colliderect(p_rect):
                         player.take_damage(b.damage)
                         b.active = False
+                        if not player.alive:
+                            smoke_imgs = AssetManager.get_instance().get_smoke_images(player.color)
+                            if smoke_imgs:
+                                for _ in range(8):
+                                    particle_effects.append(SmokeParticle(player.x + player.width//2, player.y + player.height//2, smoke_imgs))
                         continue
                         
                     for obs in obstacle_list:
                         if obs.alive and b_rect.colliderect(obs.get_rect()):
                             if obs.destructible:
                                 obs.take_damage(b.damage)
+                                if not obs.alive:
+                                    smoke_imgs = AssetManager.get_instance().get_smoke_images('black')
+                                    if smoke_imgs:
+                                        for _ in range(5):
+                                            particle_effects.append(SmokeParticle(obs.x + obs.width//2, obs.y + obs.height//2, smoke_imgs))
                             b.active = False
                             break
 
@@ -257,6 +283,9 @@ while fire:
 
         for enemy in enemy_list:
             enemy.draw(win)
+            
+        for p in particle_effects:
+            p.draw(win)
 
         pyg.display.update()
 

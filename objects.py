@@ -18,6 +18,50 @@ except Exception:
 
 win_size = [600, 600]
 
+class SmokeParticle:
+    def __init__(self, x, y, images):
+        self.images = images
+        self.image_index = 0
+        self.base_image = self.images[self.image_index]
+        self.x = x + random.randint(-15, 15)
+        self.y = y + random.randint(-15, 15)
+        self.scale = random.uniform(0.5, 1.2)
+        self.dy = random.uniform(-2, -0.5)
+        self.dx = random.uniform(-0.5, 0.5)
+        self.lifetime = random.randint(30, 60)
+        self.max_lifetime = self.lifetime
+        self.active = True
+        
+    def update(self):
+        if not self.active: return
+        self.lifetime -= 1
+        if self.lifetime <= 0:
+            self.active = False
+            return
+            
+        self.x += self.dx
+        self.y += self.dy
+        
+        progress = 1.0 - (self.lifetime / self.max_lifetime)
+        self.image_index = min(len(self.images) - 1, int(progress * len(self.images)))
+        self.base_image = self.images[self.image_index]
+
+    def draw(self, win):
+        if not self.active: return
+        alpha = int((self.lifetime / self.max_lifetime) * 255)
+        draw_img = self.base_image.copy()
+        
+        if self.scale != 1.0:
+            current_w, current_h = draw_img.get_size()
+            scaled_w = int(current_w * self.scale)
+            scaled_h = int(current_h * self.scale)
+            draw_img = pyg.transform.scale(draw_img, (scaled_w, scaled_h))
+            
+        draw_img.set_alpha(alpha)
+        rect = draw_img.get_rect(center=(self.x, self.y))
+        win.blit(draw_img, rect)
+
+
 class Obstacle:
     def __init__(self, x, y, width, height, name, destructible=False, health=100):
         self.x = x
@@ -205,7 +249,6 @@ class Tank(Entity):
         predicted_rect = self.get_rect().move(dx, dy)
         collision = False
         
-        # Room bounds
         if predicted_rect.left < 13 or predicted_rect.right > win_size[0] - 3 or predicted_rect.top < 13 or predicted_rect.bottom > win_size[1] - 3:
             collision = True
             
@@ -289,7 +332,6 @@ class Enemy(Entity):
         predicted_rect = self.get_rect().move(dx, dy)
         collision = False
         
-        # Room bounds
         if predicted_rect.left < 13 or predicted_rect.right > win_size[0] - 3 or predicted_rect.top < 13 or predicted_rect.bottom > win_size[1] - 3:
             collision = True
             
@@ -302,7 +344,6 @@ class Enemy(Entity):
             self.x += dx
             self.y += dy
         else:
-            # Force rotation earlier if blocked
             self.count = 100
                     
         self.count += 1
