@@ -18,6 +18,42 @@ except Exception:
 
 win_size = [600, 600]
 
+class Obstacle:
+    def __init__(self, x, y, width, height, name, destructible=False, health=100):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+        self.name = name
+        self.destructible = destructible
+        self.health = health
+        self.max_health = health
+        self.alive = True
+        self.image = AssetManager.get_instance().get_obstacle_image(name)
+
+    def get_rect(self):
+        return pyg.Rect(self.x, self.y, self.width, self.height)
+
+    def take_damage(self, amount):
+        if not self.destructible or not self.alive:
+            return
+        self.health -= amount
+        if self.health <= 0:
+            self.health = 0
+            self.alive = False
+            if explosion_sound:
+                explosion_sound.play()
+
+    def draw(self, win):
+        if self.alive:
+            if self.image:
+                rect = self.get_rect()
+                img_rect = self.image.get_rect(center=rect.center)
+                win.blit(self.image, img_rect)
+            else:
+                pyg.draw.rect(win, 'brown', self.get_rect())
+
+
 class Entity:
     def __init__(self, x, y, width, height, color, max_health, speed):
         self.x = x
@@ -133,8 +169,8 @@ class Bullet:
 
 class Tank(Entity):
     def __init__(self, x, y, width, height, color):
-        orig_width = 32
-        orig_height = 32
+        orig_width = 30
+        orig_height = 30
         super().__init__(x, y, orig_width, orig_height, color, max_health=100, speed=2)
         self.bullets = []
         self.shoot_time = 0
@@ -144,26 +180,43 @@ class Tank(Entity):
         self.RIGHT = False
         self.direction = 'up'
 
-    def update(self, key_pressed):
+    def update(self, key_pressed, obstacle_list):
         if not self.alive:
             return
             
-        if key_pressed[K_RIGHT] and self.x <= win_size[0] - self.width - 3:
+        dx, dy = 0, 0
+        if key_pressed[K_RIGHT]:
             self.RIGHT = True; self.LEFT = False; self.UP = False; self.DOWN = False
             self.direction = 'right'
-            self.x += self.speed
-        elif key_pressed[K_LEFT] and self.x >= 13:
+            dx = self.speed
+        elif key_pressed[K_LEFT]:
             self.LEFT = True; self.RIGHT = False; self.UP = False; self.DOWN = False
             self.direction = 'left'
-            self.x -= self.speed
-        elif key_pressed[K_DOWN] and self.y <= win_size[1] - self.height - 3:
+            dx = -self.speed
+        elif key_pressed[K_DOWN]:
             self.DOWN = True; self.UP = False; self.RIGHT = False; self.LEFT = False
             self.direction = 'down'
-            self.y += self.speed
-        elif key_pressed[K_UP] and self.y >= 13:
+            dy = self.speed
+        elif key_pressed[K_UP]:
             self.UP = True; self.DOWN = False; self.RIGHT = False; self.LEFT = False
             self.direction = 'up'
-            self.y -= self.speed
+            dy = -self.speed
+
+        predicted_rect = self.get_rect().move(dx, dy)
+        collision = False
+        
+        # Room bounds
+        if predicted_rect.left < 13 or predicted_rect.right > win_size[0] - 3 or predicted_rect.top < 13 or predicted_rect.bottom > win_size[1] - 3:
+            collision = True
+            
+        for obs in obstacle_list:
+            if obs.alive and predicted_rect.colliderect(obs.get_rect()):
+                collision = True
+                break
+                
+        if not collision:
+            self.x += dx
+            self.y += dy
 
         self.shoot_time += 1
         if key_pressed[K_SPACE] and self.shoot_time >= 25:
@@ -223,20 +276,34 @@ class Enemy(Entity):
         self.directions[self.current_direction] = True
         self.direction = self.current_direction
 
-    def update(self):
+    def update(self, obstacle_list):
         if not self.alive:
             return
             
-        for d in self.directions:
-            if self.directions[d]:
-                if d == 'right' and self.x <= win_size[0] - self.width:
-                    self.x += self.speed
-                elif d == 'left' and self.x >= 0:
-                    self.x -= self.speed
-                elif d == 'up' and self.y >= 0:
-                    self.y -= self.speed
-                elif d == 'down' and self.y <= win_size[1] - self.height:
-                    self.y += self.speed
+        dx, dy = 0, 0
+        if self.directions['right']: dx = self.speed
+        elif self.directions['left']: dx = -self.speed
+        elif self.directions['up']: dy = -self.speed
+        elif self.directions['down']: dy = self.speed
+
+        predicted_rect = self.get_rect().move(dx, dy)
+        collision = False
+        
+        # Room bounds
+        if predicted_rect.left < 13 or predicted_rect.right > win_size[0] - 3 or predicted_rect.top < 13 or predicted_rect.bottom > win_size[1] - 3:
+            collision = True
+            
+        for obs in obstacle_list:
+            if obs.alive and predicted_rect.colliderect(obs.get_rect()):
+                collision = True
+                break
+
+        if not collision:
+            self.x += dx
+            self.y += dy
+        else:
+            # Force rotation earlier if blocked
+            self.count = 100
                     
         self.count += 1
         if self.count >= 100:

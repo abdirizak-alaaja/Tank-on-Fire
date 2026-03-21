@@ -3,7 +3,7 @@ import random as rand
 import sys
 from pygame.locals import *
 from asset_manager import AssetManager
-from objects import Tank, Enemy
+from objects import Tank, Enemy, Obstacle
 
 pyg.init()
 win_size = [600, 600]
@@ -47,6 +47,7 @@ font_go = pyg.font.SysFont(None, 48)
 bg_surface = None
 player = None
 enemy_list = []
+obstacle_list = []
 game_over_played = False
 end_sound = None
 
@@ -54,7 +55,6 @@ fire = True
 timer = pyg.time.Clock()
 fps = 60
 
-# Clear relative mouse movement queue once before starting loop
 pyg.mouse.get_rel()
 
 while fire:
@@ -94,7 +94,6 @@ while fire:
         w = 150
         start_x = (win_size[0] - (w * 3 + spacing * 2)) // 2
         
-        # Hover logic dynamically updates menu_index only if mouse moves
         for i in range(len(env_options)):
             x = start_x + (i * (w + spacing))
             y = 250
@@ -106,7 +105,6 @@ while fire:
                     menu_index = i
                     start_game = True
                     
-        # Apply visual rendering strictly based on menu_index
         for i, icon in enumerate(menu_icons):
             x = start_x + (i * (w + spacing))
             y = 250
@@ -159,6 +157,23 @@ while fire:
                 color = rand.choice(colors)
                 enemy_list.append(Enemy(rand.randint(0, 600 - 30), rand.randint(0, 300), 30, 30, color))
                 
+            obstacle_list.clear()
+            obs_types = [
+                ('barrelGreen_up', True), 
+                ('barrelGrey_up', True), 
+                ('barrelRed_up', True), 
+                ('sandbagBrown', False),
+                ('oil', True)
+            ]
+            for _ in range(12):
+                otype, destructible = rand.choice(obs_types)
+                ox, oy = 300, 300
+                # Ensure obstacles don't spawn directly on the player
+                while abs(ox - 300) < 60 and abs(oy - 300) < 60:
+                    ox = rand.randint(50, win_size[0] - 50)
+                    oy = rand.randint(50, win_size[1] - 50)
+                obstacle_list.append(Obstacle(ox, oy, 35, 35, otype, destructible=destructible, health=50))
+                
             game_over_played = False
             try:
                 end_sound = pyg.mixer.Sound('endSound.wav')
@@ -176,28 +191,48 @@ while fire:
         
         # 1. Update Game State
         if player.alive:
-            player.update(key_pressed)
+            player.update(key_pressed, obstacle_list)
             
         for enemy in enemy_list:
-            enemy.update()
+            enemy.update(obstacle_list)
+
+        obstacle_list = [obs for obs in obstacle_list if obs.alive]
 
         for b in player.bullets:
             if not b.active: continue
             b_rect = b.get_rect()
+            
             for enemy in enemy_list:
                 if enemy.alive and b_rect.colliderect(enemy.get_rect()):
                     enemy.take_damage(b.damage)
                     b.active = False
                     break 
+                    
+            if b.active:
+                for obs in obstacle_list:
+                    if obs.alive and b_rect.colliderect(obs.get_rect()):
+                        if obs.destructible:
+                            obs.take_damage(b.damage)
+                        b.active = False
+                        break
 
         if player.alive:
             p_rect = player.get_rect()
             for enemy in enemy_list:
                 for b in enemy.bullets:
                     if not b.active: continue
-                    if b.get_rect().colliderect(p_rect):
+                    b_rect = b.get_rect()
+                    if b_rect.colliderect(p_rect):
                         player.take_damage(b.damage)
                         b.active = False
+                        continue
+                        
+                    for obs in obstacle_list:
+                        if obs.alive and b_rect.colliderect(obs.get_rect()):
+                            if obs.destructible:
+                                obs.take_damage(b.damage)
+                            b.active = False
+                            break
 
         enemy_list = [e for e in enemy_list if e.alive]
         while len(enemy_list) < 3:
@@ -206,6 +241,9 @@ while fire:
             enemy_list.append(Enemy(rand.randint(0, 600 - 30), rand.randint(0, 300), 30, 30, color))
 
         # 2. Render Game State
+        for obs in obstacle_list:
+            obs.draw(win)
+            
         if player.alive:
             player.draw(win)
         else:

@@ -9,6 +9,7 @@ class AssetManager:
         self.barrels = {}
         self.bullets = {}
         self.env = {}
+        self.obstacles = {}
         self.initialized = False
 
     @classmethod
@@ -66,6 +67,18 @@ class AssetManager:
                     img = pyg.transform.scale(img, (64, 64))
                     
                 self.env[key] = img
+
+        # 4. Load Obstacles
+        obs_files = ['barrelGreen_side.png', 'barrelGreen_side_damaged.png', 'barrelGreen_up.png', 
+                     'barrelGrey_sde_rust.png', 'barrelGrey_side.png', 'barrelGrey_up.png', 
+                     'barrelRed_side.png', 'barrelRed_up.png', 'oil.png', 'sandbagBeige.png', 'sandbagBrown.png']
+        for of in obs_files:
+            path = os.path.join(assets_dir, 'Obstacles', of)
+            if os.path.exists(path):
+                img = pyg.image.load(path).convert_alpha()
+                key = of.split('.')[0]
+                img = pyg.transform.scale(img, (35, 35))
+                self.obstacles[key] = img
                 
         self.initialized = True
 
@@ -116,3 +129,6 @@ class AssetManager:
 
     def get_environment_image(self, name):
         return self.env.get(name, None)
+
+    def get_obstacle_image(self, name):
+        return self.obstacles.get(name, None)
