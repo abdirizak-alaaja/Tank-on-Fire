@@ -1,56 +1,90 @@
-import pygame as pyg ,random as rand, sys,time
+import pygame as pyg
+import random as rand
+import sys
 from pygame.locals import *
-from objects import Bullet,Tank,Enemy
+from objects import Tank, Enemy
 
 pyg.init()
-
-
-win_size = [600,600] 
-
+win_size = [600, 600]
 win = pyg.display.set_mode(win_size)
-pyg.display.set_caption("tank fire ")
+pyg.display.set_caption("Tank Fire")
 
-
-
-
-
-player = Tank(300,300,20,20,'purple')
+player = Tank(300, 300, 20, 20, 'purple')
 
 enemy_list = []
-
 def newEnemy():
     colors = ['red','green','yellow','blue','skyblue','pink','navy','orange','Crimson','Coral','SlateGray','Silver']
-    color=rand.choices(colors)[0]
-    enemy_list.append(Enemy(rand.randint(0, 600), rand.randint(0, 300), 20, 20,color))
+    color = rand.choice(colors)
+    enemy_list.append(Enemy(rand.randint(0, 600 - 20), rand.randint(0, 300), 20, 20, color))
 
-
-for  i in range(3):
+for _ in range(3):
     newEnemy()
-# game variables
 
 fire = True
 timer = pyg.time.Clock()
 fps = 60
+
+font = pyg.font.SysFont(None, 48)
+
 while fire:
-	win.fill([0,0,0])
-	timer.tick(fps)
+    win.fill((0, 0, 0))
+    timer.tick(fps)
 
-	# event handling
-	for event in pyg.event.get():
-		if event.type == QUIT:
-			fire = False
-	key_pressed = pyg.key.get_pressed()
-	if key_pressed[K_ESCAPE]:
-		fire = False
-	player.update(key_pressed,win)
-	player.shoot()
+    # Event handling
+    for event in pyg.event.get():
+        if event.type == QUIT:
+            fire = False
+            
+    key_pressed = pyg.key.get_pressed()
+    if key_pressed[K_ESCAPE]:
+        fire = False
 
-	for enemy in enemy_list:
-		enemy.update(win)
-		enemy.outomove(win)
-		enemy.shoot(win)
+    # 1. Update Game State
+    if player.alive:
+        player.update(key_pressed)
+        
+    for enemy in enemy_list:
+        enemy.update()
 
-	pyg.display.update()
+    # Collect all active bullets to process collisions
+    # Player bullets vs Enemies
+    for b in player.bullets:
+        if not b.active: continue
+        b_rect = b.get_rect()
+        for enemy in enemy_list:
+            if enemy.alive and b_rect.colliderect(enemy.get_rect()):
+                enemy.take_damage(b.damage)
+                b.active = False
+                break # Bullet disappears after one hit
+
+    # Enemy bullets vs Player
+    if player.alive:
+        # Optimization: cache player rect
+        p_rect = player.get_rect()
+        for enemy in enemy_list:
+            for b in enemy.bullets:
+                if not b.active: continue
+                if b.get_rect().colliderect(p_rect):
+                    player.take_damage(b.damage)
+                    b.active = False
+
+    # Remove dead enemies and respawn new ones
+    enemy_list = [e for e in enemy_list if e.alive]
+    while len(enemy_list) < 3:
+        newEnemy()
+
+    # 2. Render Game State
+    if player.alive:
+        player.draw(win)
+    else:
+        # Game Over text
+        game_over_img = font.render('GAME OVER', True, (255, 0, 0))
+        win.blit(game_over_img, (win_size[0]//2 - game_over_img.get_width()//2, win_size[1]//2))
+
+    for enemy in enemy_list:
+        enemy.draw(win)
+
+    pyg.display.update()
+
 pyg.quit()
-
-print("GAME OVER [+1]")
+print("GAME OVER")
